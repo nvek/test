@@ -45,8 +45,8 @@ endif ()
 #---------------------Sources---------------------------#
 
 add_executable(${APPNAME}
-	src/BMPReder.h
-	src/BMPReder.cpp
+	src/BMPReader.h
+	src/BMPReader.cpp
 	src/immintrin.h
 	src/main.cpp
 	src/MainManager.h

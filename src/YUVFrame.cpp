@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "YUVFrame.h"
 
 YUVFrame::YUVFrame(const Size& size) :

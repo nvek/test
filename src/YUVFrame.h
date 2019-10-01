@@ -1,7 +1,5 @@
 #pragma once
 
-#include "pch.h"
-
 class YUVFrame
 {	
 	// представление одного кадра
@@ -19,6 +17,7 @@ class YUVFrame
 	} Size;
 
 public:
+	YUVFrame() = default;
 	YUVFrame(const Size& size);
 	~YUVFrame();
 

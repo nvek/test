@@ -1,8 +1,7 @@
-#include "pch.h"
-
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 #include "YUVFrame.h"
 #include "MainManager.h"
 #include "BMPReader.h"
@@ -12,17 +11,33 @@
 MainManager::MainManager(int argc, char** argv)
 {
 
-	if (argc != 6)
-	{
-		std::cout << "invalid arguments";
-		return;
-	}
+	//if (argc != 6)
+	//{
+	//	std::cout << "invalid arguments";
+	//	return;
+	//}
+	
+	//std::string videoFile = argv[1];
+	//int width = std::stoi(argv[2]);
+	//int height = std::stoi(argv[3]);
+	//std::string pictureFile = argv[4];
+	//std::string outputFIle = argv[5];
 
-	std::string videoFile = argv[1];
-	int width = std::stoi(argv[2]);
-	int height = std::stoi(argv[3]);
-	std::string pictureFile = argv[4];
-	std::string outputFIle = argv[5];
+	std::string videoFile = "C:/Users/Fila4/Desktop/картинки/video352-288.yuv";
+	int width = 352;
+	int height = 288;
+	std::string pictureFile = "C:/Users/Fila4/Desktop/картинки/aptem.yuv";
+	std::string outputFIle = "C:/Users/Fila4/Desktop/картинки/output12.yuv";
+
+
+	///////////////// открытие бмп //////////////////////////////
+	std::string bmpfile = "C:\\Users\\Fila4\\Desktop\\картинки\\aptem.bmp";
+	
+	// обернуть в шаред...
+	YUVFrame* pictureFrame;
+	
+	std::thread thr(BMPReader::bmpToYUVFile, bmpfile, &pictureFrame);
+	thr.join();
 
 	/////////////////////////// video ////////////////////////////////
 	std::ifstream video(videoFile, std::ios::ate, std::ios::binary);
@@ -37,15 +52,7 @@ MainManager::MainManager(int argc, char** argv)
 	int count = (int)(size / videoFrame.getFrameSize());
 	//////////////////////////////////////////////////////////////
 
-	///////////////// открытие бмп //////////////////////////////
-	BMPReader bmpFile;
-	std::string bmpfile = "C:\\Users\\Fila4\\Desktop\\картинки\\aptem.bmp";
-	bmpFile.open(bmpfile);
-	YUVFrame pictureFrame( bmpFile.toYUV() );
-	int a = 0;
-	a++;
-	std::ofstream outupFileP("C:\\Users\\Fila4\\Desktop\\картинки\\aptem1111.yuv", std::ofstream::binary);
-	outupFileP.write((char*)pictureFrame.frame(), pictureFrame.getFrameSize());
+
 
 	//////////////////////////////////////////////////////////
 
@@ -57,11 +64,11 @@ MainManager::MainManager(int argc, char** argv)
 	for (int i = 0; i < count; i++)
 	{
 		video.read((char*)videoFrame.frame(), videoFrame.getFrameSize());
-		outupFile.write((char*)(videoFrame + pictureFrame), videoFrame.getFrameSize());
+		outupFile.write((char*)videoFrame.frame(), videoFrame.getFrameSize());
+		//outupFile.write((char*)(videoFrame.frame()/* + *pictureFrame*/), videoFrame.getFrameSize());
 	}
 
 	outupFile.close();
-	//bmpFile.close();
 	video.close();
 }
 

@@ -1,6 +1,4 @@
-﻿#include "pch.h"
-
-#include "MainManager.h"
+﻿#include "MainManager.h"
 
 
 int main(int argc, char** argv)
