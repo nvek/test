@@ -1,20 +1,22 @@
 #pragma once
-#include <string>
-#include "YUVFrame.h"
 
+#include <string>
+
+class YUVFrame;
 class BMPReader
 {
-
 	// CIEXYZTRIPLE stuff
 	typedef int FXPT2DOT30;
 
-	typedef struct {
+	typedef struct
+	{
 		FXPT2DOT30 ciexyzX;
 		FXPT2DOT30 ciexyzY;
 		FXPT2DOT30 ciexyzZ;
 	} CIEXYZ;
 
-	typedef struct {
+	typedef struct
+	{
 		CIEXYZ  ciexyzRed;
 		CIEXYZ  ciexyzGreen;
 		CIEXYZ  ciexyzBlue;
@@ -32,7 +34,8 @@ class BMPReader
 	} BITMAPFILEHEADER;
 #pragma pack ( pop)
 	// bitmap info header
-	typedef struct {
+	typedef struct
+	{
 		unsigned int   biSize;
 		unsigned int   biWidth;
 		unsigned int   biHeight;
@@ -59,19 +62,6 @@ class BMPReader
 		unsigned int   biReserved;
 	} BITMAPINFOHEADER;
 
-	// rgb quad
-	typedef struct {
-		unsigned char  rgbBlue;
-		unsigned char  rgbGreen;
-		unsigned char  rgbRed;
-		unsigned char  rgbReserved;
-	} RGBQUAD;
-
-
 public:
 	static void bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame);
-	
-
-private:
-
 };

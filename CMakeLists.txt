@@ -45,12 +45,15 @@ endif ()
 #---------------------Sources---------------------------#
 
 add_executable(${APPNAME}
+
 	src/BMPReader.h
 	src/BMPReader.cpp
 	src/immintrin.h
 	src/main.cpp
 	src/MainManager.h
 	src/MainManager.cpp
+	src/YUVVideo.h
+	src/YUVVideo.cpp
 	src/YUVFrame.h
 	src/YUVFrame.cpp
 	)

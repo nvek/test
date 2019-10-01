@@ -9,7 +9,7 @@ class YUVFrame
 		unsigned char* u;
 		unsigned char* v;
 	} YUV;
-
+protected:
 	typedef struct
 	{
 		int w;
@@ -27,7 +27,7 @@ public:
 	unsigned char* frame();
 	const unsigned char* operator+(const YUVFrame& rv) const;
 
-private:
+protected:
 	Size			_size;
 	YUV				_yuv;
 	int				_frame_size_y;

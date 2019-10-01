@@ -1,4 +1,5 @@
 #include "BMPReader.h"
+#include "YUVFrame.h"
 #include <vector>
 #include <fstream>
 #include <iostream>
@@ -159,18 +160,50 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	*yuvFrame = new YUVFrame({ (int)fileInfoHeader.biHeight ,  (int)fileInfoHeader.biWidth });
 	unsigned char* frame = new unsigned char[fileInfoHeader.biHeight * fileInfoHeader.biWidth];
 	frame = (*yuvFrame)->frame();
+	
+	struct RGBQUAD {
+		unsigned char  rgbBlue;
+		unsigned char  rgbGreen;
+		unsigned char  rgbRed;
+		unsigned char  rgbReserved;
+	};
 
-
-	int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
+	// rgb info
+	RGBQUAD **rgbInfo = new RGBQUAD*[fileInfoHeader.biHeight];
+	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++) {
+		rgbInfo[i] = new RGBQUAD[fileInfoHeader.biWidth];
+	}
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 	{
 		for (unsigned int j = 0; j < fileInfoHeader.biWidth; j++)
 		{
 			read(fileStream, bufer, fileInfoHeader.biBitCount / 8);
 
-			unsigned char r = bitextract(bufer, fileInfoHeader.biRedMask);
-			unsigned char g = bitextract(bufer, fileInfoHeader.biGreenMask);
-			unsigned char b = bitextract(bufer, fileInfoHeader.biBlueMask);
+			rgbInfo[i][j].rgbRed = bitextract(bufer, fileInfoHeader.biRedMask);
+			rgbInfo[i][j].rgbGreen = bitextract(bufer, fileInfoHeader.biGreenMask);
+			rgbInfo[i][j].rgbBlue = bitextract(bufer, fileInfoHeader.biBlueMask);
+			rgbInfo[i][j].rgbReserved = bitextract(bufer, fileInfoHeader.biAlphaMask);
+
+		}
+		fileStream.seekg(linePadding, std::ios_base::cur);
+	}
+	fileStream.close();
+
+	// отзеркалить массив относительно средней строки
+	for (int i = 0; i < fileInfoHeader.biHeight / 2; ++i) {
+		std::swap(rgbInfo[i], rgbInfo[fileInfoHeader.biHeight - i - 1]);
+	}
+
+	int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
+	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
+	{
+		for (unsigned int j = 0; j < fileInfoHeader.biWidth; j++)
+		{
+			//read(fileStream, bufer, fileInfoHeader.biBitCount / 8);
+			
+			unsigned char r = rgbInfo[i][j].rgbRed;
+			unsigned char g = rgbInfo[i][j].rgbGreen;
+			unsigned char b = rgbInfo[i][j].rgbBlue;
 			
 			// well known RGB to YUV algorithm
 			int Y = RGB2Y(r, g, b);
@@ -180,8 +213,6 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 			frame[i * fileInfoHeader.biWidth + j] = Y;
 			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size] = U;
 			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size + (size / 4)] = V;
-
 		}
-		fileStream.seekg(linePadding, std::ios_base::cur);
 	}
 }
