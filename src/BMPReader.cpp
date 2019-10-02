@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 
+inline unsigned char clip(const unsigned char value) { return value > 255 ? 255 : value < 0 ? 0 : value; }
 #define CLIP(X) ( (X) > 255 ? 255 : (X) < 0 ? 0 : X)
 
 // RGB -> YUV
@@ -23,7 +24,7 @@ unsigned char bitextract(const unsigned int byte, const unsigned int mask)
 	if (mask == 0)
 		return 0;
 
-	// îïðåäåëåíèå êîëè÷åñòâà íóëåâûõ áèò ñïðàâà îò ìàñêè
+	// Ã®Ã¯Ã°Ã¥Ã¤Ã¥Ã«Ã¥Ã­Ã¨Ã¥ ÃªÃ®Ã«Ã¨Ã·Ã¥Ã±Ã²Ã¢Ã  Ã­Ã³Ã«Ã¥Ã¢Ã»Ãµ Ã¡Ã¨Ã² Ã±Ã¯Ã°Ã Ã¢Ã  Ã®Ã² Ã¬Ã Ã±ÃªÃ¨
 	int maskBufer = mask;
 	int	maskPadding = 0;
 
@@ -33,7 +34,7 @@ unsigned char bitextract(const unsigned int byte, const unsigned int mask)
 		maskPadding++;
 	}
 
-	// ïðèìåíåíèå ìàñêè è ñìåùåíèå
+	// Ã¯Ã°Ã¨Ã¬Ã¥Ã­Ã¥Ã­Ã¨Ã¥ Ã¬Ã Ã±ÃªÃ¨ Ã¨ Ã±Ã¬Ã¥Ã¹Ã¥Ã­Ã¨Ã¥
 	return (byte & mask) >> maskPadding;
 }
 
@@ -42,7 +43,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	std::ifstream fileStream(fileName, std::ifstream::binary);
 
 
-	// çàãîëîâê èçîáðàæåíèÿ
+	// Ã§Ã Ã£Ã®Ã«Ã®Ã¢Ãª Ã¨Ã§Ã®Ã¡Ã°Ã Ã¦Ã¥Ã­Ã¨Ã¿
 	BITMAPFILEHEADER fileHeader;
 	fileStream.read((char*)&fileHeader, sizeof(fileHeader));
 	if (fileHeader.bfType != 0x4D42) 
@@ -51,7 +52,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		throw std::exception(mes.c_str());
 	}
 
-	// èíôîðìàöèÿ èçîáðàæåíèÿ
+	// Ã¨Ã­Ã´Ã®Ã°Ã¬Ã Ã¶Ã¨Ã¿ Ã¨Ã§Ã®Ã¡Ã°Ã Ã¦Ã¥Ã­Ã¨Ã¿
 	BITMAPINFOHEADER fileInfoHeader;
 	read(fileStream, fileInfoHeader.biSize, sizeof(fileInfoHeader.biSize));
 
@@ -64,7 +65,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biBitCount, sizeof(fileInfoHeader.biBitCount));
 	}
 
-	// ïîëó÷àåì èíôîðìàöèþ î áèòíîñòè
+	// Ã¯Ã®Ã«Ã³Ã·Ã Ã¥Ã¬ Ã¨Ã­Ã´Ã®Ã°Ã¬Ã Ã¶Ã¨Ã¾ Ã® Ã¡Ã¨Ã²Ã­Ã®Ã±Ã²Ã¨
 	int colorsCount = fileInfoHeader.biBitCount >> 3;
 	if (colorsCount < 3)
 	{
@@ -97,7 +98,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biBlueMask, sizeof(fileInfoHeader.biBlueMask));
 	}
 
-	// åñëè ìàñêà íå çàäàíà, òî ñòàâèì ìàñêó ïî óìîë÷àíèþ
+	// Ã¥Ã±Ã«Ã¨ Ã¬Ã Ã±ÃªÃ  Ã­Ã¥ Ã§Ã Ã¤Ã Ã­Ã , Ã²Ã® Ã±Ã²Ã Ã¢Ã¨Ã¬ Ã¬Ã Ã±ÃªÃ³ Ã¯Ã® Ã³Ã¬Ã®Ã«Ã·Ã Ã­Ã¨Ã¾
 	if (fileInfoHeader.biRedMask == 0 || fileInfoHeader.biGreenMask == 0 || fileInfoHeader.biBlueMask == 0)
 	{
 		fileInfoHeader.biRedMask = maskValue << (bitsOnColor * 2);
@@ -134,7 +135,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biReserved, sizeof(fileInfoHeader.biReserved));
 	}
 
-	// ïðîâåðêà íà ïîääåðêó ýòîé âåðñèè ôîðìàòà
+	// Ã¯Ã°Ã®Ã¢Ã¥Ã°ÃªÃ  Ã­Ã  Ã¯Ã®Ã¤Ã¤Ã¥Ã°ÃªÃ³ Ã½Ã²Ã®Ã© Ã¢Ã¥Ã°Ã±Ã¨Ã¨ Ã´Ã®Ã°Ã¬Ã Ã²Ã 
 	if (fileInfoHeader.biSize != 12 && fileInfoHeader.biSize != 40 && fileInfoHeader.biSize != 52 &&
 		fileInfoHeader.biSize != 56 && fileInfoHeader.biSize != 108 && fileInfoHeader.biSize != 124)
 	{
@@ -151,10 +152,10 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		throw std::exception("Error: Unsupported BMP compression.");
 	}
 
-	// îïðåäåëåíèå ðàçìåðà îòñòóïà â êîíöå êàæäîé ñòðîêè
+	// Ã®Ã¯Ã°Ã¥Ã¤Ã¥Ã«Ã¥Ã­Ã¨Ã¥ Ã°Ã Ã§Ã¬Ã¥Ã°Ã  Ã®Ã²Ã±Ã²Ã³Ã¯Ã  Ã¢ ÃªÃ®Ã­Ã¶Ã¥ ÃªÃ Ã¦Ã¤Ã®Ã© Ã±Ã²Ã°Ã®ÃªÃ¨
 	int linePadding = ((fileInfoHeader.biWidth * (fileInfoHeader.biBitCount / 8)) % 4) & 3;
 
-	// ÷òåíèå
+	// Ã·Ã²Ã¥Ã­Ã¨Ã¥
 	unsigned int bufer;
 	
 	*yuvFrame = new YUVFrame({ (int)fileInfoHeader.biHeight ,  (int)fileInfoHeader.biWidth });
@@ -189,7 +190,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	}
 	fileStream.close();
 
-	// îòçåðêàëèòü ìàññèâ îòíîñèòåëüíî ñðåäíåé ñòðîêè
+	// Ã®Ã²Ã§Ã¥Ã°ÃªÃ Ã«Ã¨Ã²Ã¼ Ã¬Ã Ã±Ã±Ã¨Ã¢ Ã®Ã²Ã­Ã®Ã±Ã¨Ã²Ã¥Ã«Ã¼Ã­Ã® Ã±Ã°Ã¥Ã¤Ã­Ã¥Ã© Ã±Ã²Ã°Ã®ÃªÃ¨
 	for (int i = 0; i < fileInfoHeader.biHeight / 2; ++i) {
 		std::swap(rgbInfo[i], rgbInfo[fileInfoHeader.biHeight - i - 1]);
 	}
