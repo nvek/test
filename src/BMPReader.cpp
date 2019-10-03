@@ -1,8 +1,11 @@
-#include "BMPReader.h"
-#include "YUVFrame.h"
 #include <vector>
 #include <fstream>
 #include <iostream>
+
+#include "BMPReader.h"
+#include "YUVFrame.h"
+#include "immintrin.h"
+#include "getCPUTime.c"
 
 #define CLIP(X) ( (X) > 255 ? 255 : (X) < 0 ? 0 : X)
 
@@ -168,11 +171,15 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		unsigned char  rgbReserved;
 	};
 
+	double start, end;
+
+	start = getCPUTime();
+
 	// rgb info
 	RGBQUAD **rgbInfo = new RGBQUAD*[fileInfoHeader.biHeight];
-	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++) {
+	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 		rgbInfo[i] = new RGBQUAD[fileInfoHeader.biWidth];
-	}
+
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 	{
 		for (unsigned int j = 0; j < fileInfoHeader.biWidth; j++)
@@ -190,7 +197,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	fileStream.close();
 
 	// переворачиваем
-	for (int i = 0; i < fileInfoHeader.biHeight / 2; ++i)
+	for (unsigned int i = 0; i < fileInfoHeader.biHeight / 2; ++i)
 	{
 		std::swap(rgbInfo[i], rgbInfo[fileInfoHeader.biHeight - i - 1]);
 	}
@@ -198,13 +205,62 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 	{
-		for (unsigned int j = 0; j < fileInfoHeader.biWidth; j++)
+		for (size_t j = 0; j < (fileInfoHeader.biWidth & ~7); j += 8)
 		{
-			unsigned char r = rgbInfo[i][j].rgbRed;
-			unsigned char g = rgbInfo[i][j].rgbGreen;
-			unsigned char b = rgbInfo[i][j].rgbBlue;
+			// что я хочу получить?
+			// три запакованных массива по 8 
+			// элементов для синего зеленого и красного составляющих
+			auto arrOfBlue = _mm_set_epi16(
+				rgbInfo[i][j + 7].rgbBlue, rgbInfo[i][j + 6].rgbBlue, 
+				rgbInfo[i][j + 5].rgbBlue, rgbInfo[i][j + 4].rgbBlue, 
+				rgbInfo[i][j + 3].rgbBlue, rgbInfo[i][j + 2].rgbBlue, 
+				rgbInfo[i][j + 1].rgbBlue, rgbInfo[i][j].rgbBlue
+			);
 			
+			auto arrOfGreen = _mm_set_epi16(
+				rgbInfo[i][j + 7].rgbGreen, rgbInfo[i][j + 6].rgbGreen,
+				rgbInfo[i][j + 5].rgbGreen, rgbInfo[i][j + 4].rgbGreen,
+				rgbInfo[i][j + 3].rgbGreen, rgbInfo[i][j + 2].rgbGreen,
+				rgbInfo[i][j + 1].rgbGreen, rgbInfo[i][j].rgbGreen
+			);
+
+			auto arrOfRed = _mm_set_epi16(
+				rgbInfo[i][j + 7].rgbRed, rgbInfo[i][j + 6].rgbRed,
+				rgbInfo[i][j + 5].rgbRed, rgbInfo[i][j + 4].rgbRed,
+				rgbInfo[i][j + 3].rgbRed, rgbInfo[i][j + 2].rgbRed,
+				rgbInfo[i][j + 1].rgbRed, rgbInfo[i][j].rgbRed
+			);
+
+	
+			// получить три запакованных массива по 8 элементов для Y U и V соответственно
+			//unsigned char r = rgbInfo[i][j].rgbRed;
+			//unsigned char g = rgbInfo[i][j].rgbGreen;
+			//unsigned char b = rgbInfo[i][j].rgbBlue;
+			
+			// положить на нужные места в результирующий фрейм
 			// well known RGB to YUV algorithm
+
+			// вектор красный умножил на 0.299
+			auto _dArrayOfRed = mm_cvtepi32_pd(arrOfRed)
+			__m128d ry = _mm_mul_pd(_, _mm_set1_pd(0.299));
+			__m128d gy = _mm_mul_pd(_mm_cvtepi32_pd(arrOfGreen), _mm_set1_pd(0.587));
+			__m128d by = _mm_mul_pd(_mm_cvtepi32_pd(arrOfBlue), _mm_set1_pd(0.114));
+			__m128d _y = _mm_add_pd(_mm_add_pd(ry, gy), by);
+
+
+			__m128d ru = _mm_mul_pd(_mm_cvtepi32_pd(arrOfRed), _mm_set1_pd(0.299));
+			__m128d gu = _mm_mul_pd(_mm_cvtepi32_pd(arrOfGreen), _mm_set1_pd(0.587));
+			__m128d bu = _mm_mul_pd(_mm_cvtepi32_pd(arrOfBlue), _mm_set1_pd(0.114));
+			__m128d _u = _mm_add_pd(_mm_add_pd(ry, gy), by);
+
+			__m128d rv = _mm_mul_pd(_mm_cvtepi32_pd(arrOfRed), _mm_set1_pd(0.299));
+			__m128d gv = _mm_mul_pd(_mm_cvtepi32_pd(arrOfGreen), _mm_set1_pd(0.587));
+			__m128d bv = _mm_mul_pd(_mm_cvtepi32_pd(arrOfBlue), _mm_set1_pd(0.114));
+			__m128d _v = _mm_add_pd(_mm_add_pd(ry, gy), by);
+
+			// (((66 * R + 129 * G + 25 * B) >> 8) + 16)
+			//#define RGB2Y(R, G, B) CLIP(( (  66 * (R) + 129 * (G) +  25 * (B) + 128) >> 8) +  16)
+
 			unsigned char Y = RGB2Y(r, g, b);
 			unsigned char U = RGB2U(r, g, b);
 			unsigned char V = RGB2V(r, g, b);
@@ -218,4 +274,8 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 		delete[] rgbInfo[i];
 	delete[] rgbInfo;
+
+	end = getCPUTime();
+
+	std::cout << "итого что мы имеем: " << end - start; //1) 0,031 ~ 0.046
 }

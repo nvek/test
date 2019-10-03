@@ -48,6 +48,7 @@ add_executable(${APPNAME}
 
 	src/BMPReader.h
 	src/BMPReader.cpp
+	src/getCPUTIme.c
 	src/immintrin.h
 	src/main.cpp
 	src/MainManager.h
