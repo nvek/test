@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <crtdbg.h>
+
 #include "MainManager.h"
 
 int main(int argc, char** argv)

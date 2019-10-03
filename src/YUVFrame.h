@@ -10,13 +10,14 @@ class YUVFrame
 		unsigned char* v;
 	} YUV;
 protected:
+
+
+public:	
 	typedef struct
 	{
 		int w;
 		int h;
 	} Size;
-
-public:
 	YUVFrame() = default;
 	YUVFrame(const Size& size);
 	~YUVFrame();

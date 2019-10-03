@@ -4,7 +4,6 @@
 #include <fstream>
 #include <iostream>
 
-inline unsigned char clip(const unsigned char value) { return value > 255 ? 255 : value < 0 ? 0 : value; }
 #define CLIP(X) ( (X) > 255 ? 255 : (X) < 0 ? 0 : X)
 
 // RGB -> YUV
@@ -158,9 +157,9 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	// ÷òåíèå
 	unsigned int bufer;
 	
-	*yuvFrame = new YUVFrame({ (int)fileInfoHeader.biHeight ,  (int)fileInfoHeader.biWidth });
-	unsigned char* frame = new unsigned char[fileInfoHeader.biHeight * fileInfoHeader.biWidth];
-	frame = (*yuvFrame)->frame();
+	YUVFrame::Size pictureSize = { (int)fileInfoHeader.biWidth ,  (int)fileInfoHeader.biHeight };
+	*yuvFrame = new YUVFrame(pictureSize);
+	unsigned char*	frame = (*yuvFrame)->frame();
 	
 	struct RGBQUAD {
 		unsigned char  rgbBlue;
@@ -190,8 +189,9 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	}
 	fileStream.close();
 
-	// îòçåðêàëèòü ìàññèâ îòíîñèòåëüíî ñðåäíåé ñòðîêè
-	for (int i = 0; i < fileInfoHeader.biHeight / 2; ++i) {
+	// переворачиваем
+	for (int i = 0; i < fileInfoHeader.biHeight / 2; ++i)
+	{
 		std::swap(rgbInfo[i], rgbInfo[fileInfoHeader.biHeight - i - 1]);
 	}
 
@@ -200,20 +200,22 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	{
 		for (unsigned int j = 0; j < fileInfoHeader.biWidth; j++)
 		{
-			//read(fileStream, bufer, fileInfoHeader.biBitCount / 8);
-			
 			unsigned char r = rgbInfo[i][j].rgbRed;
 			unsigned char g = rgbInfo[i][j].rgbGreen;
 			unsigned char b = rgbInfo[i][j].rgbBlue;
 			
 			// well known RGB to YUV algorithm
-			int Y = RGB2Y(r, g, b);
-			int U = RGB2U(r, g, b);
-			int V = RGB2V(r, g, b);
+			unsigned char Y = RGB2Y(r, g, b);
+			unsigned char U = RGB2U(r, g, b);
+			unsigned char V = RGB2V(r, g, b);
 
 			frame[i * fileInfoHeader.biWidth + j] = Y;
 			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size] = U;
 			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size + (size / 4)] = V;
 		}
 	}
+
+	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
+		delete[] rgbInfo[i];
+	delete[] rgbInfo;
 }

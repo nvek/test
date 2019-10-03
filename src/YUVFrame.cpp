@@ -4,7 +4,7 @@ YUVFrame::YUVFrame(const Size& size) :
 _size(size)
 {
 	_frame_size_y = size.w * size.h;
-	_frame_size_uv = ((size.w + 1) >> 1) * ((size.h + 1) >> 1);
+	_frame_size_uv = (size.w >> 1) * (size.h >> 1);
 	_frame_size = _frame_size_y + 2 * _frame_size_uv;
 	
 	_frame = new unsigned char[_frame_size];
@@ -23,37 +23,31 @@ unsigned char* YUVFrame::frame()
 	return _frame;
 }
 
+// плюсуется картинка
 const unsigned char* YUVFrame::operator+(const YUVFrame & rv) const
 {
-	int pictureW = rv._size.w;
-	for (int v = 0, p = 0, w = 0; p < rv._frame_size_y; v++, p++, w++)
+	auto correct = [](unsigned char byte, unsigned char byte2) -> unsigned char
 	{
-		// по ширине самого маленького (картинки, по условию она не может быть больше видео)
-		if (w >= pictureW)
+		// не уверен что так надо делать(корректировать цвет)
+		if ((byte + byte2) > 255)
+			return 255;
+		
+		return byte + byte2;
+	};
+
+	for (int i = 0; i < rv._size.h; i++)
+		for (int j = 0; j < rv._size.w; j++)
 		{
-			v += (_size.w - pictureW);
-			w = 0;
+			_yuv.y[i*_size.w + j] += correct(rv._yuv.y[i* rv._size.w + j], _yuv.y[i*_size.w + j]);
 		}
 
-		if ((_yuv.y[v] + rv._yuv.y[p]) < 255)
-			_yuv.y[v] += rv._yuv.y[p];
-	}
-
-	for (int v = 0, p = 0, w = 0; p < rv._frame_size_uv; v++, p++, w++)
-	{
-		// тут по половинке w
-		if (w >= pictureW / 2)
+	for (int i = 0; i < rv._size.h / 2; i++)
+		for (int j = 0; j < rv._size.w / 2; j++)
 		{
-			v += _size.w / 2 - pictureW / 2;
-			w = 0;
+			_yuv.v[i*_size.w / 2 + j] = correct (rv._yuv.v[i* rv._size.w / 2 + j] , _yuv.v[i*_size.w / 2 + j]);
+			_yuv.u[i*_size.w / 2 + j] = correct (rv._yuv.u[i* rv._size.w / 2 + j] , _yuv.v[i*_size.w / 2 + j]);
 		}
 
-		if ((_yuv.u[v] + rv._yuv.u[p]) < 255)
-			_yuv.u[v] += rv._yuv.u[p];
-
-		if ((_yuv.v[v] + rv._yuv.v[p]) < 255)
-			_yuv.v[v] += rv._yuv.v[p];
-	}
 	return _frame;
 }
 
