@@ -1,6 +1,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <exception>
 
 #include "BMPReader.h"
 #include "YUVFrame.h"
@@ -27,7 +28,7 @@ unsigned char bitextract(const unsigned int byte, const unsigned int mask)
 		return 0;
 
 	// îïðåäåëåíèå êîëè÷åñòâà íóëåâûõ áèò ñïðàâà îò ìàñêè
-	int maskBufer = mask;
+	unsigned int maskBufer = mask;
 	int	maskPadding = 0;
 
 	while (!(maskBufer & 1)) 
@@ -47,11 +48,12 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 
 	// çàãîëîâê èçîáðàæåíèÿ
 	BITMAPFILEHEADER fileHeader;
-	fileStream.read((char*)&fileHeader, sizeof(fileHeader));
+
+	fileStream.read(reinterpret_cast<char*>(&fileHeader), sizeof(fileHeader));
 	if (fileHeader.bfType != 0x4D42) 
 	{
 		std::string mes = "Error: '" + fileName + "' is not BMP file.";
-		throw std::exception(mes.c_str());
+		throw std::runtime_error(mes.c_str());
 	}
 
 	// èíôîðìàöèÿ èçîáðàæåíèÿ
@@ -141,17 +143,17 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	if (fileInfoHeader.biSize != 12 && fileInfoHeader.biSize != 40 && fileInfoHeader.biSize != 52 &&
 		fileInfoHeader.biSize != 56 && fileInfoHeader.biSize != 108 && fileInfoHeader.biSize != 124)
 	{
-		throw std::exception("Error: Unsupported BMP format.");
+		throw std::runtime_error("Error: Unsupported BMP format.");
 	}
 
 	if (fileInfoHeader.biBitCount != 16 && fileInfoHeader.biBitCount != 24 && fileInfoHeader.biBitCount != 32) 
 	{
-		throw std::exception("Error: Unsupported BMP bit count.");
+		throw std::runtime_error("Error: Unsupported BMP bit count.");
 	}
 
 	if (fileInfoHeader.biCompression != 0 && fileInfoHeader.biCompression != 3)
 	{
-		throw std::exception("Error: Unsupported BMP compression.");
+		throw std::runtime_error("Error: Unsupported BMP compression.");
 	}
 
 	// îïðåäåëåíèå ðàçìåðà îòñòóïà â êîíöå êàæäîé ñòðîêè
@@ -160,7 +162,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	// ÷òåíèå
 	unsigned int bufer;
 	
-	YUVFrame::Size pictureSize = { (int)fileInfoHeader.biWidth ,  (int)fileInfoHeader.biHeight };
+	YUVFrame::Size pictureSize = { static_cast<int>(fileInfoHeader.biWidth) ,  static_cast<int>(fileInfoHeader.biHeight) };
 	*yuvFrame = new YUVFrame(pictureSize);
 	unsigned char*	frame = (*yuvFrame)->frame();
 	
@@ -202,64 +204,15 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		std::swap(rgbInfo[i], rgbInfo[fileInfoHeader.biHeight - i - 1]);
 	}
 
-	int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
+	unsigned int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 	{
-		for (size_t j = 0; j < (fileInfoHeader.biWidth & ~7); j += 8)
+		for (size_t j = 0; j < fileInfoHeader.biWidth; j ++)
 		{
-			// что я хочу получить?
-			// три запакованных массива по 8 
-			// элементов для синего зеленого и красного составляющих
-			auto arrOfBlue = _mm_set_epi16(
-				rgbInfo[i][j + 7].rgbBlue, rgbInfo[i][j + 6].rgbBlue, 
-				rgbInfo[i][j + 5].rgbBlue, rgbInfo[i][j + 4].rgbBlue, 
-				rgbInfo[i][j + 3].rgbBlue, rgbInfo[i][j + 2].rgbBlue, 
-				rgbInfo[i][j + 1].rgbBlue, rgbInfo[i][j].rgbBlue
-			);
+			unsigned char r = rgbInfo[i][j].rgbRed;
+			unsigned char g = rgbInfo[i][j].rgbGreen;
+			unsigned char b = rgbInfo[i][j].rgbBlue;
 			
-			auto arrOfGreen = _mm_set_epi16(
-				rgbInfo[i][j + 7].rgbGreen, rgbInfo[i][j + 6].rgbGreen,
-				rgbInfo[i][j + 5].rgbGreen, rgbInfo[i][j + 4].rgbGreen,
-				rgbInfo[i][j + 3].rgbGreen, rgbInfo[i][j + 2].rgbGreen,
-				rgbInfo[i][j + 1].rgbGreen, rgbInfo[i][j].rgbGreen
-			);
-
-			auto arrOfRed = _mm_set_epi16(
-				rgbInfo[i][j + 7].rgbRed, rgbInfo[i][j + 6].rgbRed,
-				rgbInfo[i][j + 5].rgbRed, rgbInfo[i][j + 4].rgbRed,
-				rgbInfo[i][j + 3].rgbRed, rgbInfo[i][j + 2].rgbRed,
-				rgbInfo[i][j + 1].rgbRed, rgbInfo[i][j].rgbRed
-			);
-
-	
-			// получить три запакованных массива по 8 элементов для Y U и V соответственно
-			//unsigned char r = rgbInfo[i][j].rgbRed;
-			//unsigned char g = rgbInfo[i][j].rgbGreen;
-			//unsigned char b = rgbInfo[i][j].rgbBlue;
-			
-			// положить на нужные места в результирующий фрейм
-			// well known RGB to YUV algorithm
-
-			// вектор красный умножил на 0.299
-			auto _dArrayOfRed = mm_cvtepi32_pd(arrOfRed)
-			__m128d ry = _mm_mul_pd(_, _mm_set1_pd(0.299));
-			__m128d gy = _mm_mul_pd(_mm_cvtepi32_pd(arrOfGreen), _mm_set1_pd(0.587));
-			__m128d by = _mm_mul_pd(_mm_cvtepi32_pd(arrOfBlue), _mm_set1_pd(0.114));
-			__m128d _y = _mm_add_pd(_mm_add_pd(ry, gy), by);
-
-
-			__m128d ru = _mm_mul_pd(_mm_cvtepi32_pd(arrOfRed), _mm_set1_pd(0.299));
-			__m128d gu = _mm_mul_pd(_mm_cvtepi32_pd(arrOfGreen), _mm_set1_pd(0.587));
-			__m128d bu = _mm_mul_pd(_mm_cvtepi32_pd(arrOfBlue), _mm_set1_pd(0.114));
-			__m128d _u = _mm_add_pd(_mm_add_pd(ry, gy), by);
-
-			__m128d rv = _mm_mul_pd(_mm_cvtepi32_pd(arrOfRed), _mm_set1_pd(0.299));
-			__m128d gv = _mm_mul_pd(_mm_cvtepi32_pd(arrOfGreen), _mm_set1_pd(0.587));
-			__m128d bv = _mm_mul_pd(_mm_cvtepi32_pd(arrOfBlue), _mm_set1_pd(0.114));
-			__m128d _v = _mm_add_pd(_mm_add_pd(ry, gy), by);
-
-			// (((66 * R + 129 * G + 25 * B) >> 8) + 16)
-			//#define RGB2Y(R, G, B) CLIP(( (  66 * (R) + 129 * (G) +  25 * (B) + 128) >> 8) +  16)
 
 			unsigned char Y = RGB2Y(r, g, b);
 			unsigned char U = RGB2U(r, g, b);
