@@ -15,7 +15,7 @@ MainManager::MainManager(int argc, char** argv)
 	// парсим аргументы командной строки
 	parseCommandLine(argc, argv);
 
-	// конвертим бмп 
+	// конвертим бмп
 	bmpConvertToYuv();
 
 	// создаем фрейм для видео
@@ -40,24 +40,23 @@ MainManager::~MainManager()
 
 void MainManager::parseCommandLine(int argc, char** argv)
 {
+	if (argc != 6)
+	{
+		std::cout << "invalid arguments";
+		return;
+	}
 
-	//if (argc != 6)
-	//{
-	//	std::cout << "invalid arguments";
-	//	return;
-	//}
+	std::string _sourceVideoPath = argv[1];
+	_width = std::stoi(argv[2]);
+	_height = std::stoi(argv[3]);
+	std::string _pictureBmpPath = argv[4];
+	std::string _outputVideoPath = argv[5];
 
-	//std::string videoFile = argv[1];
-	//int width = std::stoi(argv[2]);
-	//int height = std::stoi(argv[3]);
-	//std::string pictureFile = argv[4];
-	//std::string outputFIle = argv[5];
-
-	_sourceVideoPath = "C:/Users/Fila4/Desktop/картинки/video.yuv";
-	_outputVideoPath = "C:/Users/Fila4/Desktop/картинки/output.yuv";
-	_pictureBmpPath = "C:/Users/Fila4/Desktop/картинки/aptem.bmp";
-	_width = 352;
-	_height = 288;
+//	_sourceVideoPath = "C:/Users/Fila4/Desktop/картинки/video.yuv";
+//	_outputVideoPath = "C:/Users/Fila4/Desktop/картинки/output.yuv";
+//	_pictureBmpPath = "C:/Users/Fila4/Desktop/картинки/aptem.bmp";
+//	_width = 352;
+//	_height = 288;
 }
 
 void MainManager::bmpConvertToYuv()
