@@ -8,6 +8,17 @@
 #include "immintrin.h"
 #include "getCPUTime.c"
 
+
+const float RRGB24YUV_00 = 0.299f;
+const float RRGB24YUV_01 = 0.587f;
+const float RRGB24YUV_02 = 0.114f;
+const float RRGB24YUV_10 = -0.147f;
+const float RRGB24YUV_11 = -0.289f;
+const float RRGB24YUV_12 = 0.436f;
+const float RRGB24YUV_20 = 0.615f;
+const float RRGB24YUV_21 = -0.515f;
+const float RRGB24YUV_22 = -0.100f;
+
 #define CLIP(X) ( (X) > 255 ? 255 : (X) < 0 ? 0 : X)
 
 // RGB -> YUV
@@ -27,7 +38,7 @@ unsigned char bitextract(const unsigned int byte, const unsigned int mask)
 	if (mask == 0)
 		return 0;
 
-	// îïðåäåëåíèå êîëè÷åñòâà íóëåâûõ áèò ñïðàâà îò ìàñêè
+	// определение количества нулевых бит справа от маски
 	unsigned int maskBufer = mask;
 	int	maskPadding = 0;
 
@@ -37,7 +48,7 @@ unsigned char bitextract(const unsigned int byte, const unsigned int mask)
 		maskPadding++;
 	}
 
-	// ïðèìåíåíèå ìàñêè è ñìåùåíèå
+	// применение маски и смещение
 	return (byte & mask) >> maskPadding;
 }
 
@@ -46,17 +57,17 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	std::ifstream fileStream(fileName, std::ifstream::binary);
 
 
-	// çàãîëîâê èçîáðàæåíèÿ
+	// заголовк изображения
 	BITMAPFILEHEADER fileHeader;
 
-	fileStream.read(reinterpret_cast<char*>(&fileHeader), sizeof(fileHeader));
+	fileStream.read((char*)(&fileHeader), sizeof(fileHeader));
 	if (fileHeader.bfType != 0x4D42) 
 	{
 		std::string mes = "Error: '" + fileName + "' is not BMP file.";
 		throw std::runtime_error(mes.c_str());
 	}
 
-	// èíôîðìàöèÿ èçîáðàæåíèÿ
+	// информация изображения
 	BITMAPINFOHEADER fileInfoHeader;
 	read(fileStream, fileInfoHeader.biSize, sizeof(fileInfoHeader.biSize));
 
@@ -69,7 +80,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biBitCount, sizeof(fileInfoHeader.biBitCount));
 	}
 
-	// ïîëó÷àåì èíôîðìàöèþ î áèòíîñòè
+	// получаем информацию о битности
 	int colorsCount = fileInfoHeader.biBitCount >> 3;
 	if (colorsCount < 3)
 	{
@@ -102,7 +113,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biBlueMask, sizeof(fileInfoHeader.biBlueMask));
 	}
 
-	// åñëè ìàñêà íå çàäàíà, òî ñòàâèì ìàñêó ïî óìîë÷àíèþ
+	// если маска не задана, то ставим маску по умолчанию
 	if (fileInfoHeader.biRedMask == 0 || fileInfoHeader.biGreenMask == 0 || fileInfoHeader.biBlueMask == 0)
 	{
 		fileInfoHeader.biRedMask = maskValue << (bitsOnColor * 2);
@@ -139,7 +150,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biReserved, sizeof(fileInfoHeader.biReserved));
 	}
 
-	// ïðîâåðêà íà ïîääåðêó ýòîé âåðñèè ôîðìàòà
+	// проверка на поддерку этой версии формата
 	if (fileInfoHeader.biSize != 12 && fileInfoHeader.biSize != 40 && fileInfoHeader.biSize != 52 &&
 		fileInfoHeader.biSize != 56 && fileInfoHeader.biSize != 108 && fileInfoHeader.biSize != 124)
 	{
@@ -156,10 +167,9 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		throw std::runtime_error("Error: Unsupported BMP compression.");
 	}
 
-	// îïðåäåëåíèå ðàçìåðà îòñòóïà â êîíöå êàæäîé ñòðîêè
+	// определение размера отступа в конце каждой строки
 	int linePadding = ((fileInfoHeader.biWidth * (fileInfoHeader.biBitCount / 8)) % 4) & 3;
 
-	// ÷òåíèå
 	unsigned int bufer;
 	
 	YUVFrame::Size pictureSize = { static_cast<int>(fileInfoHeader.biWidth) ,  static_cast<int>(fileInfoHeader.biHeight) };
@@ -204,23 +214,86 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		std::swap(rgbInfo[i], rgbInfo[fileInfoHeader.biHeight - i - 1]);
 	}
 
+	__m128 val00 = _mm_set1_ps (RRGB24YUV_00);
+	__m128 val01 = _mm_set1_ps (RRGB24YUV_01);
+	__m128 val02 = _mm_set1_ps (RRGB24YUV_02);
+	__m128 val10 = _mm_set1_ps (RRGB24YUV_10);
+	__m128 val11 = _mm_set1_ps (RRGB24YUV_11);
+	__m128 val12 = _mm_set1_ps (RRGB24YUV_12);
+	__m128 val20 = _mm_set1_ps (RRGB24YUV_20);
+	__m128 val21 = _mm_set1_ps (RRGB24YUV_21);
+	__m128 val22 = _mm_set1_ps (RRGB24YUV_22);
+
+	auto correct = [](float b) -> unsigned char
+	{
+		if (b > 255)
+			return 255;
+
+		if (b < 0)
+			return 0;
+
+		return static_cast<unsigned char>(b);
+	};
+
 	unsigned int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 	{
-		for (size_t j = 0; j < fileInfoHeader.biWidth; j ++)
+		for (size_t j = 0; j < fileInfoHeader.biWidth; j +=4)
 		{
-			unsigned char r = rgbInfo[i][j].rgbRed;
-			unsigned char g = rgbInfo[i][j].rgbGreen;
-			unsigned char b = rgbInfo[i][j].rgbBlue;
-			
 
-			unsigned char Y = RGB2Y(r, g, b);
-			unsigned char U = RGB2U(r, g, b);
-			unsigned char V = RGB2V(r, g, b);
+			__m128 sseArrR = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 3].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 3].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 3].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 3].rgbRed));
 
-			frame[i * fileInfoHeader.biWidth + j] = Y;
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size] = U;
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size + (size / 4)] = V;
+			__m128 sseArrG = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
+					static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
+					static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
+					static_cast<float>(rgbInfo[i][j + 2].rgbGreen));
+
+			__m128 sseArrB = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
+					static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
+					static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
+					static_cast<float>(rgbInfo[i][j + 1].rgbBlue));
+
+			__m128 yr = _mm_mul_ps(sseArrR, val00);
+			__m128 yg = _mm_mul_ps(sseArrG, val01);
+			__m128 yb = _mm_mul_ps(sseArrB, val02);
+
+			__m128 ur = _mm_mul_ps(sseArrR, val10);
+			__m128 ug = _mm_mul_ps(sseArrG, val11);
+			__m128 ub = _mm_mul_ps(sseArrB, val12);
+
+			__m128 vr = _mm_mul_ps(sseArrR, val20);
+			__m128 vg = _mm_mul_ps(sseArrG, val21);
+			__m128 vb = _mm_mul_ps(sseArrB, val22);
+
+			__m128 Y = _mm_add_ps(_mm_add_ps(yr, yg), yb);
+			__m128 U = _mm_add_ps(_mm_add_ps(ur, ug), ub);
+			__m128 V = _mm_add_ps(_mm_add_ps(vr, vg), vb);
+
+			float bufY[4];
+			float bufU[4];
+			float bufV[4];
+			_mm_store_ps(bufY, Y);
+			_mm_store_ps(bufU, U);
+			_mm_store_ps(bufV, V);
+
+			frame[i * fileInfoHeader.biWidth + (j)] = correct(bufY[3]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size] = correct(bufU[3]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size + (size / 4)] = correct(bufV[3]);
+
+			frame[i * fileInfoHeader.biWidth + (j + 1)] = correct(bufY[2]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size] = correct(bufU[2]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size + (size / 4)] = correct(bufV[2]);
+
+			frame[i * fileInfoHeader.biWidth + (j + 2)] = correct(bufY[1]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size] = correct(bufU[1]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size + (size / 4)] = correct(bufV[1]);
+
+			frame[i * fileInfoHeader.biWidth + (j + 3)] = correct(bufY[0]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size] = correct(bufU[0]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size + (size / 4)] = correct(bufV[0]);
 		}
 	}
 
@@ -230,5 +303,6 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 
 	end = getCPUTime();
 
-	std::cout << "итого что мы имеем: " << end - start; //1) 0,031 ~ 0.046
+	std::cout << "итого что мы имеем: " << end - start << std::endl; //1) 0,031 ~ 0.046
+
 }
