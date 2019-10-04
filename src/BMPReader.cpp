@@ -60,7 +60,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	// заголовк изображения
 	BITMAPFILEHEADER fileHeader;
 
-	fileStream.read(reinterpret_cast<char*>(&fileHeader), sizeof(fileHeader));
+	fileStream.read((char*)(&fileHeader), sizeof(fileHeader));
 	if (fileHeader.bfType != 0x4D42) 
 	{
 		std::string mes = "Error: '" + fileName + "' is not BMP file.";
@@ -261,23 +261,27 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 			__m128 U = _mm_add_ps(_mm_add_ps(ur, ug), ub);
 			__m128 V = _mm_add_ps(_mm_add_ps(vr, vg), vb);
 
+			float bufY[4];
+			float bufU[4];
+			float bufV[4];
+			_mm_store_ps(bufY, Y);
 
-			frame[i * fileInfoHeader.biWidth + (j)] = Y[0];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size] = U[0];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size + (size / 4)] = V[0];
 
-			frame[i * fileInfoHeader.biWidth + (j + 1)] = Y[1];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size] = U[1];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size + (size / 4)] = V[1];
+			frame[i * fileInfoHeader.biWidth + (j)] = static_cast<unsigned char>(bufY[0]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size] = static_cast<unsigned char>(bufU[0]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[0]);
 
-			frame[i * fileInfoHeader.biWidth + (j + 2)] = Y[2];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size] = U[2];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size + (size / 4)] = V[2];
+			frame[i * fileInfoHeader.biWidth + (j + 1)] = static_cast<unsigned char>(bufY[1]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size] = static_cast<unsigned char>(bufU[1]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[1]);
 
-			frame[i * fileInfoHeader.biWidth + (j + 3)] = Y[3];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size] = U[3];
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size + (size / 4)] = V[3];
+			frame[i * fileInfoHeader.biWidth + (j + 2)] = static_cast<unsigned char>(bufY[2]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size] = static_cast<unsigned char>(bufU[2]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[2]);
 
+			frame[i * fileInfoHeader.biWidth + (j + 3)] = static_cast<unsigned char>(bufY[3]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size] = static_cast<unsigned char>(bufU[3]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[3]);
 		}
 	}
 
