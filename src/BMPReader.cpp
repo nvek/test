@@ -27,7 +27,7 @@ unsigned char bitextract(const unsigned int byte, const unsigned int mask)
 	if (mask == 0)
 		return 0;
 
-	// îïðåäåëåíèå êîëè÷åñòâà íóëåâûõ áèò ñïðàâà îò ìàñêè
+	// определение количества нулевых бит справа от маски
 	unsigned int maskBufer = mask;
 	int	maskPadding = 0;
 
@@ -37,7 +37,7 @@ unsigned char bitextract(const unsigned int byte, const unsigned int mask)
 		maskPadding++;
 	}
 
-	// ïðèìåíåíèå ìàñêè è ñìåùåíèå
+	// применение маски и смещение
 	return (byte & mask) >> maskPadding;
 }
 
@@ -46,7 +46,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	std::ifstream fileStream(fileName, std::ifstream::binary);
 
 
-	// çàãîëîâê èçîáðàæåíèÿ
+	// заголовк изображения
 	BITMAPFILEHEADER fileHeader;
 
 	fileStream.read(reinterpret_cast<char*>(&fileHeader), sizeof(fileHeader));
@@ -56,7 +56,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		throw std::runtime_error(mes.c_str());
 	}
 
-	// èíôîðìàöèÿ èçîáðàæåíèÿ
+	// информация изображения
 	BITMAPINFOHEADER fileInfoHeader;
 	read(fileStream, fileInfoHeader.biSize, sizeof(fileInfoHeader.biSize));
 
@@ -139,7 +139,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biReserved, sizeof(fileInfoHeader.biReserved));
 	}
 
-	// ïðîâåðêà íà ïîääåðêó ýòîé âåðñèè ôîðìàòà
+	// проверка на поддерку этой версии формата
 	if (fileInfoHeader.biSize != 12 && fileInfoHeader.biSize != 40 && fileInfoHeader.biSize != 52 &&
 		fileInfoHeader.biSize != 56 && fileInfoHeader.biSize != 108 && fileInfoHeader.biSize != 124)
 	{
