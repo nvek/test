@@ -224,26 +224,37 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 	__m128 val21 = _mm_set1_ps (RRGB24YUV_21);
 	__m128 val22 = _mm_set1_ps (RRGB24YUV_22);
 
+	auto correct = [](float b) -> unsigned char
+	{
+		if (b > 255)
+			return 255;
+
+		if (b < 0)
+			return 0;
+
+		return static_cast<unsigned char>(b);
+	};
+
 	unsigned int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 	{
 		for (size_t j = 0; j < fileInfoHeader.biWidth; j +=4)
 		{
 
-			__m128 sseArrR = _mm_setr_ps(static_cast<float>(rgbInfo[i][3].rgbRed),
-					static_cast<float>(rgbInfo[i][2].rgbRed),
-					static_cast<float>(rgbInfo[i][1].rgbRed),
-					static_cast<float>(rgbInfo[i][0].rgbRed));
+			__m128 sseArrR = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 3].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 3].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 3].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 3].rgbRed));
 
-			__m128 sseArrG = _mm_setr_ps(static_cast<float>(rgbInfo[i][3].rgbGreen),
-					static_cast<float>(rgbInfo[i][2].rgbGreen),
-					static_cast<float>(rgbInfo[i][1].rgbGreen),
-					static_cast<float>(rgbInfo[i][0].rgbGreen));
+			__m128 sseArrG = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
+					static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
+					static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
+					static_cast<float>(rgbInfo[i][j + 2].rgbGreen));
 
-			__m128 sseArrB = _mm_setr_ps(static_cast<float>(rgbInfo[i][3].rgbBlue),
-					static_cast<float>(rgbInfo[i][2].rgbBlue),
-					static_cast<float>(rgbInfo[i][1].rgbBlue),
-					static_cast<float>(rgbInfo[i][0].rgbBlue));
+			__m128 sseArrB = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
+					static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
+					static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
+					static_cast<float>(rgbInfo[i][j + 1].rgbBlue));
 
 			__m128 yr = _mm_mul_ps(sseArrR, val00);
 			__m128 yg = _mm_mul_ps(sseArrG, val01);
@@ -265,23 +276,24 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 			float bufU[4];
 			float bufV[4];
 			_mm_store_ps(bufY, Y);
+			_mm_store_ps(bufU, U);
+			_mm_store_ps(bufV, V);
 
+			frame[i * fileInfoHeader.biWidth + (j)] = correct(bufY[3]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size] = correct(bufU[3]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size + (size / 4)] = correct(bufV[3]);
 
-			frame[i * fileInfoHeader.biWidth + (j)] = static_cast<unsigned char>(bufY[0]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size] = static_cast<unsigned char>(bufU[0]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[0]);
+			frame[i * fileInfoHeader.biWidth + (j + 1)] = correct(bufY[2]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size] = correct(bufU[2]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size + (size / 4)] = correct(bufV[2]);
 
-			frame[i * fileInfoHeader.biWidth + (j + 1)] = static_cast<unsigned char>(bufY[1]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size] = static_cast<unsigned char>(bufU[1]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[1]);
+			frame[i * fileInfoHeader.biWidth + (j + 2)] = correct(bufY[1]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size] = correct(bufU[1]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size + (size / 4)] = correct(bufV[1]);
 
-			frame[i * fileInfoHeader.biWidth + (j + 2)] = static_cast<unsigned char>(bufY[2]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size] = static_cast<unsigned char>(bufU[2]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[2]);
-
-			frame[i * fileInfoHeader.biWidth + (j + 3)] = static_cast<unsigned char>(bufY[3]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size] = static_cast<unsigned char>(bufU[3]);
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size + (size / 4)] = static_cast<unsigned char>(bufV[3]);
+			frame[i * fileInfoHeader.biWidth + (j + 3)] = correct(bufY[0]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size] = correct(bufU[0]);
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size + (size / 4)] = correct(bufV[0]);
 		}
 	}
 
@@ -291,5 +303,6 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 
 	end = getCPUTime();
 
-	std::cout << "итого что мы имеем: " << end - start; //1) 0,031 ~ 0.046
+	std::cout << "итого что мы имеем: " << end - start << std::endl; //1) 0,031 ~ 0.046
+
 }
