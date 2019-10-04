@@ -8,6 +8,17 @@
 #include "immintrin.h"
 #include "getCPUTime.c"
 
+
+const float RRGB24YUV_00 = 0.299f;
+const float RRGB24YUV_01 = 0.587f;
+const float RRGB24YUV_02 = 0.114f;
+const float RRGB24YUV_10 = -0.147f;
+const float RRGB24YUV_11 = -0.289f;
+const float RRGB24YUV_12 = 0.436f;
+const float RRGB24YUV_20 = 0.615f;
+const float RRGB24YUV_21 = -0.515f;
+const float RRGB24YUV_22 = -0.100f;
+
 #define CLIP(X) ( (X) > 255 ? 255 : (X) < 0 ? 0 : X)
 
 // RGB -> YUV
@@ -203,23 +214,70 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		std::swap(rgbInfo[i], rgbInfo[fileInfoHeader.biHeight - i - 1]);
 	}
 
+	__m128 val00 = _mm_set1_ps (RRGB24YUV_00);
+	__m128 val01 = _mm_set1_ps (RRGB24YUV_01);
+	__m128 val02 = _mm_set1_ps (RRGB24YUV_02);
+	__m128 val10 = _mm_set1_ps (RRGB24YUV_10);
+	__m128 val11 = _mm_set1_ps (RRGB24YUV_11);
+	__m128 val12 = _mm_set1_ps (RRGB24YUV_12);
+	__m128 val20 = _mm_set1_ps (RRGB24YUV_20);
+	__m128 val21 = _mm_set1_ps (RRGB24YUV_21);
+	__m128 val22 = _mm_set1_ps (RRGB24YUV_22);
+
 	unsigned int size = fileInfoHeader.biHeight * fileInfoHeader.biWidth;
 	for (unsigned int i = 0; i < fileInfoHeader.biHeight; i++)
 	{
-		for (size_t j = 0; j < fileInfoHeader.biWidth; j ++)
+		for (size_t j = 0; j < fileInfoHeader.biWidth; j +=4)
 		{
-			unsigned char r = rgbInfo[i][j].rgbRed;
-			unsigned char g = rgbInfo[i][j].rgbGreen;
-			unsigned char b = rgbInfo[i][j].rgbBlue;
-			
 
-			unsigned char Y = RGB2Y(r, g, b);
-			unsigned char U = RGB2U(r, g, b);
-			unsigned char V = RGB2V(r, g, b);
+			__m128 sseArrR = _mm_setr_ps(static_cast<float>(rgbInfo[i][3].rgbRed),
+					static_cast<float>(rgbInfo[i][2].rgbRed),
+					static_cast<float>(rgbInfo[i][1].rgbRed),
+					static_cast<float>(rgbInfo[i][0].rgbRed));
 
-			frame[i * fileInfoHeader.biWidth + j] = Y;
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size] = U;
-			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + (j / 2) + size + (size / 4)] = V;
+			__m128 sseArrG = _mm_setr_ps(static_cast<float>(rgbInfo[i][3].rgbGreen),
+					static_cast<float>(rgbInfo[i][2].rgbGreen),
+					static_cast<float>(rgbInfo[i][1].rgbGreen),
+					static_cast<float>(rgbInfo[i][0].rgbGreen));
+
+			__m128 sseArrB = _mm_setr_ps(static_cast<float>(rgbInfo[i][3].rgbBlue),
+					static_cast<float>(rgbInfo[i][2].rgbBlue),
+					static_cast<float>(rgbInfo[i][1].rgbBlue),
+					static_cast<float>(rgbInfo[i][0].rgbBlue));
+
+			__m128 yr = _mm_mul_ps(sseArrR, val00);
+			__m128 yg = _mm_mul_ps(sseArrG, val01);
+			__m128 yb = _mm_mul_ps(sseArrB, val02);
+
+			__m128 ur = _mm_mul_ps(sseArrR, val10);
+			__m128 ug = _mm_mul_ps(sseArrG, val11);
+			__m128 ub = _mm_mul_ps(sseArrB, val12);
+
+			__m128 vr = _mm_mul_ps(sseArrR, val20);
+			__m128 vg = _mm_mul_ps(sseArrG, val21);
+			__m128 vb = _mm_mul_ps(sseArrB, val22);
+
+			__m128 Y = _mm_add_ps(_mm_add_ps(yr, yg), yb);
+			__m128 U = _mm_add_ps(_mm_add_ps(ur, ug), ub);
+			__m128 V = _mm_add_ps(_mm_add_ps(vr, vg), vb);
+
+
+			frame[i * fileInfoHeader.biWidth + (j)] = Y[0];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size] = U[0];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size + (size / 4)] = V[0];
+
+			frame[i * fileInfoHeader.biWidth + (j + 1)] = Y[1];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size] = U[1];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 1) / 2) + size + (size / 4)] = V[1];
+
+			frame[i * fileInfoHeader.biWidth + (j + 2)] = Y[2];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size] = U[2];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 2) / 2) + size + (size / 4)] = V[2];
+
+			frame[i * fileInfoHeader.biWidth + (j + 3)] = Y[3];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size] = U[3];
+			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j + 3) / 2) + size + (size / 4)] = V[3];
+
 		}
 	}
 
