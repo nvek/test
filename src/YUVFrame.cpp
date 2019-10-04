@@ -23,12 +23,12 @@ unsigned char* YUVFrame::frame()
 	return _frame;
 }
 
-// ïëşñóåòñÿ êàğòèíêà
+// Ğ¿Ğ»ÑÑÑƒĞµÑ‚ÑÑ ĞºĞ°Ñ€Ñ‚Ğ¸Ğ½ĞºĞ°
 const unsigned char* YUVFrame::operator+(const YUVFrame & rv) const
 {
 	auto correct = [](unsigned char byte, unsigned char byte2) -> unsigned char
 	{
-		// íå óâåğåí ÷òî òàê íàäî äåëàòü(êîğğåêòèğîâàòü öâåò)
+		// Ğ½Ğµ ÑƒĞ²ĞµÑ€ĞµĞ½ Ñ‡Ñ‚Ğ¾ Ñ‚Ğ°Ğº Ğ½Ğ°Ğ´Ğ¾ Ğ´ĞµĞ»Ğ°Ñ‚ÑŒ(ĞºĞ¾Ñ€Ñ€ĞµĞºÑ‚Ğ¸Ñ€Ğ¾Ğ²Ğ°Ñ‚ÑŒ Ñ†Ğ²ĞµÑ‚)
 		if ((byte + byte2) > 255)
 			return 255;
 		

@@ -69,7 +69,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biBitCount, sizeof(fileInfoHeader.biBitCount));
 	}
 
-	// ïîëó÷àåì èíôîðìàöèþ î áèòíîñòè
+	// получаем информацию о битности
 	int colorsCount = fileInfoHeader.biBitCount >> 3;
 	if (colorsCount < 3)
 	{
@@ -102,7 +102,7 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		read(fileStream, fileInfoHeader.biBlueMask, sizeof(fileInfoHeader.biBlueMask));
 	}
 
-	// åñëè ìàñêà íå çàäàíà, òî ñòàâèì ìàñêó ïî óìîë÷àíèþ
+	// если маска не задана, то ставим маску по умолчанию
 	if (fileInfoHeader.biRedMask == 0 || fileInfoHeader.biGreenMask == 0 || fileInfoHeader.biBlueMask == 0)
 	{
 		fileInfoHeader.biRedMask = maskValue << (bitsOnColor * 2);
@@ -156,10 +156,9 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		throw std::runtime_error("Error: Unsupported BMP compression.");
 	}
 
-	// îïðåäåëåíèå ðàçìåðà îòñòóïà â êîíöå êàæäîé ñòðîêè
+	// определение размера отступа в конце каждой строки
 	int linePadding = ((fileInfoHeader.biWidth * (fileInfoHeader.biBitCount / 8)) % 4) & 3;
 
-	// ÷òåíèå
 	unsigned int bufer;
 	
 	YUVFrame::Size pictureSize = { static_cast<int>(fileInfoHeader.biWidth) ,  static_cast<int>(fileInfoHeader.biHeight) };

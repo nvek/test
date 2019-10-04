@@ -3,16 +3,16 @@
 #include <string>
 #include <fstream>
 
-// суть этого класса заключается в том, чтобы он возвращал из потока массив байт по ширине фрейма
+// СЃСѓС‚СЊ СЌС‚РѕРіРѕ РєР»Р°СЃСЃР° Р·Р°РєР»СЋС‡Р°РµС‚СЃСЏ РІ С‚РѕРј, С‡С‚РѕР±С‹ РѕРЅ РІРѕР·РІСЂР°С‰Р°Р» РёР· РїРѕС‚РѕРєР° РјР°СЃСЃРёРІ Р±Р°Р№С‚ РїРѕ С€РёСЂРёРЅРµ С„СЂРµР№РјР°
 YUVVIdeo::YUVVIdeo(const std::string& videoFile, Size size) :
 YUVFrame(size),
 _video(videoFile, std::ios::ate | std::ios::binary | std::ios::in)
 {
 	if (!_video.is_open())
 		return;
-	// получаем размер файла
+	// РїРѕР»СѓС‡Р°РµРј СЂР°Р·РјРµСЂ С„Р°Р№Р»Р°
 	size_t filesize = _video.tellg();
-	// начало файла
+	// РЅР°С‡Р°Р»Рѕ С„Р°Р№Р»Р°
 	_video.seekg(0, std::ios::beg);
 
 	_count = (int)(filesize / getFrameSize());

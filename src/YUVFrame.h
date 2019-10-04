@@ -2,7 +2,6 @@
 
 class YUVFrame
 {	
-	// представление одного кадра
 	typedef struct
 	{
 		unsigned char* y;
