@@ -242,19 +242,19 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 		{
 
 			__m128 sseArrR = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 3].rgbRed),
-					static_cast<float>(rgbInfo[i][j + 3].rgbRed),
-					static_cast<float>(rgbInfo[i][j + 3].rgbRed),
-					static_cast<float>(rgbInfo[i][j + 3].rgbRed));
+					static_cast<float>(rgbInfo[i][j + 2].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 1].rgbRed),
+					static_cast<float>(rgbInfo[i][j + 0].rgbRed));
 
-			__m128 sseArrG = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
+			__m128 sseArrG = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 3].rgbGreen),
 					static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
-					static_cast<float>(rgbInfo[i][j + 2].rgbGreen),
-					static_cast<float>(rgbInfo[i][j + 2].rgbGreen));
+					static_cast<float>(rgbInfo[i][j + 1].rgbGreen),
+					static_cast<float>(rgbInfo[i][j + 0].rgbGreen));
 
-			__m128 sseArrB = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
+			__m128 sseArrB = _mm_setr_ps(static_cast<float>(rgbInfo[i][j + 3].rgbBlue),
+					static_cast<float>(rgbInfo[i][j + 2].rgbBlue),
 					static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
-					static_cast<float>(rgbInfo[i][j + 1].rgbBlue),
-					static_cast<float>(rgbInfo[i][j + 1].rgbBlue));
+					static_cast<float>(rgbInfo[i][j + 0].rgbBlue));
 
 			__m128 yr = _mm_mul_ps(sseArrR, val00);
 			__m128 yg = _mm_mul_ps(sseArrG, val01);
@@ -278,6 +278,10 @@ void BMPReader::bmpToYUVFile(const std::string& fileName, YUVFrame** yuvFrame)
 			_mm_store_ps(bufY, Y);
 			_mm_store_ps(bufU, U);
 			_mm_store_ps(bufV, V);
+
+			int indexY;
+			int indexU;
+			int undexV;
 
 			frame[i * fileInfoHeader.biWidth + (j)] = correct(bufY[3]);
 			frame[(i / 2) * (fileInfoHeader.biWidth / 2) + ((j) / 2) + size] = correct(bufU[3]);
